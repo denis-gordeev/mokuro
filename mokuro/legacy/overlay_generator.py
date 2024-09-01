@@ -264,6 +264,8 @@ def get_page_html(result, img_path):
             with tag("div", klass="textBox", style=box_style):
                 for line in result_blk["lines"]:
                     with tag("p"):
+                        if type(line) is list:
+                            line = "".join(line)
                         text(line)
 
     html = doc.getvalue()

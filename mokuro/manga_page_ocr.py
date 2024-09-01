@@ -55,6 +55,9 @@ class MangaPageOcr:
             return result
 
         mask, mask_refined, blk_list = self.text_detector(img, refine_mode=1, keep_undetected_mask=True)
+        subimages = []
+        subimage_info = []
+
         for blk_idx, blk in enumerate(blk_list):
             result_blk = {
                 "box": list(blk.xyxy),
@@ -80,14 +83,22 @@ class MangaPageOcr:
                     anchor_window=self.anchor_window,
                 )
 
-                line_text = ""
                 for line_crop in line_crops:
                     if blk.vertical:
                         line_crop = cv2.rotate(line_crop, cv2.ROTATE_90_CLOCKWISE)
-                    line_text += self.mocr(Image.fromarray(line_crop))
+                    subimages.append(line_crop)
+                    subimage_info.append((result_blk, line))
 
+        # Process subimages in batches
+        batch_size = 32  # Adjust batch size as needed
+        for i in range(0, len(subimages), batch_size):
+            batch = subimages[i:i + batch_size]
+            batch_texts = [self.mocr(Image.fromarray(subimg)) for subimg in batch]
+
+            for j, text in enumerate(batch_texts):
+                result_blk, line = subimage_info[i + j]
                 result_blk["lines_coords"].append(line.tolist())
-                result_blk["lines"].append(line_text)
+                result_blk["lines"].append(text)
 
             result["blocks"].append(result_blk)
 
